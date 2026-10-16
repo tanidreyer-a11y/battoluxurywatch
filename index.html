@@ -26,7 +26,7 @@
 <header class="top">
   <a class="mark" href="#top" aria-label="BATTO, back to top">BATTO</a>
   <nav class="nav" aria-label="Main">
-    <a href="#certificate">The watch</a>
+    <a href="#time">The watch</a>
     <a href="#line">The line</a>
     <a href="#fitting">Boutique</a>
   </nav>
@@ -35,6 +35,7 @@
 
 <!-- ================= HERO: one fixed stage, scrubbed by .track ================= -->
 <div class="stage" aria-hidden="true"><canvas id="cv"></canvas><div class="veil"></div></div>
+<i class="hero-fade" id="heroFade" aria-hidden="true"></i>
 <i class="meter" id="meter" aria-hidden="true"></i>
 
 <main id="top">
@@ -80,30 +81,32 @@
   </div>
   <div class="track" id="track"></div>
 
-  <!-- ================= After the hero: panels lift over the held last frame ================= -->
-  <section class="sheet cert" id="certificate" aria-labelledby="cert-h">
-    <div class="wrap cert-grid">
-      <div class="cert-copy">
-        <h2 id="cert-h">Measured, not promised.</h2>
-        <p>Every BATTO leaves with its own timing sheet. Six positions, three temperatures, one line that shows how it actually keeps time.</p>
+  <!-- ================= TIME: the O in BATTO is a live 3D watch head ================= -->
+  <section class="chap c-midnight timeword" id="time" aria-labelledby="time-h">
+    <div class="tw-stage">
+      <h2 class="tw-word" id="time-h" aria-label="BATTO">
+        <span class="tw-l" aria-hidden="true">B</span><span class="tw-l" aria-hidden="true">A</span><span class="tw-l" aria-hidden="true">T</span><span class="tw-l" aria-hidden="true">T</span><span class="tw-o" aria-hidden="true"><canvas id="clockCv"></canvas><i class="tw-o-fallback">O</i></span>
+      </h2>
+      <p class="tw-now">It's <time id="localTime" class="mono">--:--</time> where you are.</p>
+      <p class="tw-sub">The O keeps your time, to the second. So will the watch.</p>
+    </div>
+  </section>
+
+  <!-- ================= NUMBERS: what the movement is doing right now ================= -->
+  <section class="chap c-paper numbers" id="numbers" aria-labelledby="num-h">
+    <div class="wrap">
+      <h2 id="num-h" class="wdth-in">Eight beats a second.</h2>
+      <p class="lede">The balance wheel swings 28,800 times an hour. This is how many times it has swung since you opened the page.</p>
+      <div class="beats-live" aria-live="off">
+        <span class="odo" id="beatOdo" aria-label="Beats since you arrived"></span>
+        <span class="odo-label">beats since you arrived</span>
       </div>
-      <figure class="sheet-card" aria-label="Sample timing sheet">
-        <div class="sheet-head"><span>Timing sheet</span><span>BT-01 · No. 0001</span></div>
-        <div class="trace-box">
-          <svg class="trace" viewBox="0 0 600 140" preserveAspectRatio="none" aria-hidden="true">
-            <line class="trace-grid" x1="0" y1="70" x2="600" y2="70"/>
-            <path id="tracePath" d="M0 70 C40 66 60 74 100 69 S160 64 200 71 S270 75 300 68 S360 63 400 70 S470 76 500 69 S560 66 600 70"/>
-            <circle id="tracePen" r="4" cx="0" cy="70"/>
-          </svg>
-        </div>
-        <dl class="read">
-          <div><dt>Rate</dt><dd>+2 s/d</dd></div>
-          <div><dt>Amplitude</dt><dd>285°</dd></div>
-          <div><dt>Beat error</dt><dd>0.1 ms</dd></div>
-          <div><dt>Positions</dt><dd>6</dd></div>
-        </dl>
-        <figcaption>Sample values. Real figures arrive with production pieces.</figcaption>
-      </figure>
+      <dl class="figs">
+        <div><dt>Power reserve</dt><dd><span class="odo" data-to="70"></span><span class="unit">h</span></dd><p>Take it off on Friday. It's still running on Monday.</p></div>
+        <div><dt>Daily rate</dt><dd><span class="sign">±</span><span class="odo" data-to="2"></span><span class="unit">s/d</span></dd><p>Two seconds either way, across a whole day.</p></div>
+        <div><dt>Counters</dt><dd><span class="odo" data-to="3"></span></dd><p>Seconds, thirty minutes and twelve hours, read at a glance.</p></div>
+      </dl>
+      <p class="note">Sample specifications for the demo build.</p>
     </div>
   </section>
 
@@ -115,7 +118,7 @@
         <section class="beat b-left scrim" data-beat data-kind="rule">
           <h2>It starts inside.</h2>
           <i class="rule" aria-hidden="true"></i>
-          <p>Before there is a dial there is this: gear trains, jewels and a balance beating eight times a second.</p>
+          <p>Before there's a dial there's this: gear trains, jewels and a balance beating eight times a second.</p>
         </section>
         <section class="beat b-left b-low scrim" data-beat data-kind="plain">
           <h2>Then everything closes over it.</h2>
@@ -130,70 +133,75 @@
           <a class="btn btn-solid" href="#line">Choose your dial</a>
         </section>
       </div>
-      <div class="doors" aria-hidden="true">
-        <i class="door door-l"></i><i class="door door-r"></i>
-        <p class="doors-copy"><span>From the first wheel</span><span>to the finished watch.</span></p>
-      </div>
-      <div class="curtain" aria-hidden="true">
-        <div class="curtain-in">
-          <h2>It arrives in midnight suede.</h2>
-          <p>A black lacquer case lined in the same blue as the dial.</p>
+      <!-- Seam covers: a field sweeps round like a seconds hand, holds one line, sweeps off -->
+      <div class="sweep sweep-a" aria-hidden="true"><i class="hand"></i><p class="sweep-copy">From the first wheel<br><span>to the finished watch.</span></p></div>
+      <div class="sweep sweep-b" aria-hidden="true"><i class="hand"></i><p class="sweep-copy">It arrives in midnight suede.<br><span>Lined in the same blue as the dial.</span></p></div>
+    </div>
+  </section>
+
+  <!-- ================= THE LINE: four dials on a ring, the active one at twelve ================= -->
+  <section class="chap line" id="line" aria-labelledby="line-h">
+    <div class="ring-stage">
+      <h2 id="line-h" class="ring-title">Choose your dial.</h2>
+      <div class="ring" id="ring">
+        <i class="ring-track" aria-hidden="true"></i>
+        <i class="ring-arc" aria-hidden="true"></i>
+        <figure class="dialw" data-i="0"><img src="img/bt-01.webp" alt="BATTO BT-01, gold case and midnight-blue dial" width="960" height="1200"></figure>
+        <figure class="dialw" data-i="1"><img src="img/bt-02.webp" alt="BATTO BT-02, steel case and midnight-blue dial" width="960" height="1200" loading="lazy"></figure>
+        <figure class="dialw" data-i="2"><img src="img/bt-03.webp" alt="BATTO BT-03, steel case and racing-green dial" width="960" height="1200" loading="lazy"></figure>
+        <figure class="dialw" data-i="3"><img src="img/bt-04.webp" alt="BATTO BT-04, steel case and white dial with red counters" width="960" height="1200" loading="lazy"></figure>
+        <div class="hub" aria-live="polite">
+          <span class="hub-ref mono" id="hubRef">BT-01</span>
+          <b class="hub-name" id="hubName">Midnight on gold</b>
+          <span class="hub-spec" id="hubSpec">Yellow gold · midnight blue</span>
+          <span class="hub-price mono">Price on request</span>
         </div>
+      </div>
+      <div class="ring-picks" role="group" aria-label="Choose a reference">
+        <button type="button" class="pick" data-i="0" aria-pressed="true">BT-01</button>
+        <button type="button" class="pick" data-i="1" aria-pressed="false">BT-02</button>
+        <button type="button" class="pick" data-i="2" aria-pressed="false">BT-03</button>
+        <button type="button" class="pick" data-i="3" aria-pressed="false">BT-04</button>
       </div>
     </div>
   </section>
-  <section class="sheet line" id="line" aria-labelledby="line-h">
-    <div class="wrap">
-      <h2 id="line-h">Choose your dial.</h2>
-      <div class="lineup">
-        <figure class="slot side" data-ref="BT-02"><div class="shot"><img src="img/bt-02.webp" alt="BATTO BT-02, steel case and midnight-blue dial" width="960" height="1200" loading="lazy"></div><figcaption><b>Midnight on steel</b><span>BT-02</span></figcaption></figure>
-        <figure class="slot main" data-ref="BT-01">
-          <div class="crop" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-          <div class="shot"><img src="img/bt-01.webp" alt="BATTO BT-01, gold case and midnight-blue dial" width="960" height="1200"></div>
-          <figcaption><b>Midnight on gold</b><span>BT-01</span></figcaption>
-        </figure>
-        <figure class="slot side" data-ref="BT-03"><div class="shot"><img src="img/bt-03.webp" alt="BATTO BT-03, steel case and racing-green dial" width="960" height="1200" loading="lazy"></div><figcaption><b>Racing green on steel</b><span>BT-03</span></figcaption></figure>
-      </div>
-      <table class="refs">
-        <caption class="sr-only">The BATTO line. Pick a reference to see it in the frame.</caption>
-        <thead><tr><th scope="col">Ref</th><th scope="col">Case</th><th scope="col">Dial</th><th scope="col">Price</th></tr></thead>
-        <tbody>
-          <tr class="on" data-ref="BT-01" data-img="img/bt-01.webp" data-name="Midnight on gold" data-alt="BATTO BT-01, gold case and midnight-blue dial"><td><button type="button" class="ref-btn" aria-pressed="true">BT-01</button></td><td>Yellow gold</td><td>Midnight blue</td><td>On request</td></tr>
-          <tr data-ref="BT-02" data-img="img/bt-02.webp" data-name="Midnight on steel" data-alt="BATTO BT-02, steel case and midnight-blue dial"><td><button type="button" class="ref-btn" aria-pressed="false">BT-02</button></td><td>Steel</td><td>Midnight blue</td><td>On request</td></tr>
-          <tr data-ref="BT-03" data-img="img/bt-03.webp" data-name="Racing green on steel" data-alt="BATTO BT-03, steel case and racing-green dial"><td><button type="button" class="ref-btn" aria-pressed="false">BT-03</button></td><td>Steel</td><td>Racing green</td><td>On request</td></tr>
-          <tr data-ref="BT-04" data-img="img/bt-04.webp" data-name="White with red counters" data-alt="BATTO BT-04, steel case and white dial with red counters"><td><button type="button" class="ref-btn" aria-pressed="false">BT-04</button></td><td>Steel</td><td>White, red counters</td><td>On request</td></tr>
-        </tbody>
-      </table>    </div>
-  </section>
 
-  <section class="sheet fitting" id="fitting" aria-labelledby="fit-h">
+  <!-- ================= FITTING: pick a slot on a magnifying tick rail ================= -->
+  <section class="chap c-green fitting" id="fitting" aria-labelledby="fit-h">
     <div class="wrap fit-grid">
-      <div>
-        <h2 id="fit-h">Try it on first.</h2>
-        <p>A private fitting takes about forty minutes, and nothing is asked of you.</p>
+      <div class="fit-copy">
+        <h2 id="fit-h" class="wdth-in">Try it on first.</h2>
+        <p>Forty minutes at the boutique, the watch on your wrist, nothing asked of you. Pick a time.</p>
       </div>
       <form class="fit-form" id="fitForm" novalidate>
+        <fieldset class="days"><legend>Day</legend><div class="day-row" id="dayRow"></div></fieldset>
+        <fieldset class="slots"><legend>Time</legend>
+          <div class="rail" id="rail" role="radiogroup" aria-label="Fitting time"></div>
+          <p class="slot-read mono" id="slotRead" aria-live="polite">Choose a time</p>
+        </fieldset>
         <label>Name<input name="name" autocomplete="name" required></label>
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
-        <label>Where
-          <select name="where"><option>Johannesburg boutique</option><option>Cape Town boutique</option><option>Video call</option></select>
-        </label>
-        <button class="btn btn-solid" type="submit">Book a private fitting</button>
+        <button class="btn btn-solid" type="submit">Book the fitting</button>
         <p class="form-note" id="formNote" aria-live="polite"></p>
       </form>
     </div>
   </section>
 
-  <footer class="foot">
+  <footer class="foot c-midnight">
     <div class="wrap foot-grid">
       <span class="mark">BATTO</span>
-      <nav aria-label="Footer"><a href="#certificate">The watch</a><a href="#line">The line</a><a href="#fitting">Boutique</a></nav>
+      <dl class="clocks">
+        <div><dt>Where you are</dt><dd class="mono" id="clkLocal">--:--:--</dd></div>
+        <div><dt>Johannesburg boutique</dt><dd class="mono" id="clkJhb">--:--:--</dd></div>
+      </dl>
       <small>© 2026 BATTO. Demo build.</small>
     </div>
   </footer>
 </main>
 
 <i class="vh-probe" id="vhProbe" aria-hidden="true"></i>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }</script>
 <script src="app.js"></script>
+<script type="module" src="clock.js"></script>
 </body>
 </html>

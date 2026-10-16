@@ -19,6 +19,7 @@
     return t;
   }
   var probe = document.getElementById("vhProbe"), unit = 1, cw = 0, ch = 0, dpr = 1;
+  var heroFade = document.getElementById("heroFade"), extras = [];
   var HOLD_ZOOM = 0.03, R = 18, DRIFT = 22;
 
   /* ============================ SCRUB FACTORY ============================ */
@@ -198,16 +199,43 @@
         c.querySelector(".lead").style.width = (lx - ax).toFixed(1) + "px";
       }
     },
-    onPaint:function(S, pos){ meter.style.transform = "scaleX(" + (pos / S.TOTAL).toFixed(4) + ")"; }
+    onPaint:function(S, pos){
+      meter.style.transform = "scaleX(" + (pos / S.TOTAL).toFixed(4) + ")";
+      // The held last frame dissolves into midnight as the time section arrives: no panel lifts over it
+      var f = ramp(pos, S.TOTAL - 70, S.TOTAL).toFixed(3);
+      if (f !== heroFade._f){ heroFade._f = f; heroFade.style.opacity = f; }
+    }
   });
 
   /* ============================ CHAPTER 2 ============================ */
   // 641 frames, 1440x810: gears 0..96 · gear-to-watch reveal 97..182 (side bars cut away)
   //   front pose 183..274 · night, lume 275..399 · your box transition 400..520 · descent 521..640
   var s2el = document.getElementById("inside");
-  var doors = s2el.querySelectorAll(".door"), doorCopy = s2el.querySelector(".doors-copy");
-  var curtain = s2el.querySelector(".curtain"), curtainIn = curtain.querySelector(".curtain-in");
-  var cover = { d:-1, c:-1 };
+  var sweeps = [].map.call(s2el.querySelectorAll(".sweep"), function(el){
+    return { el:el, hand:el.querySelector(".hand"), copy:el.querySelector(".sweep-copy"), key:"" };
+  });
+  function wedge(a0, a1){                       // clockwise from twelve, degrees; big radius covers corners
+    var pts = ["50% 50%"];
+    for (var a = a0; a < a1; a += 6) pts.push(pt(a));
+    pts.push(pt(a1));
+    return "polygon(" + pts.join(",") + ")";
+    function pt(d){ var r = d * Math.PI / 180; return (50 + 150 * Math.sin(r)).toFixed(2) + "% " + (50 - 150 * Math.cos(r)).toFixed(2) + "%"; }
+  }
+  function paintSweep(w, pos, si, so){
+    var c = ramp(pos, si.start + 4, si.end - 10), o = ramp(pos, so.start + 10, so.end - 4);
+    var key = c.toFixed(4) + "|" + o.toFixed(4);
+    if (key === w.key) return; w.key = key;
+    if (c <= 0 || o >= 1){ w.el.style.visibility = "hidden"; return; }
+    w.el.style.visibility = "visible";
+    var edge;
+    if (o > 0){ edge = 360 * o; w.el.style.clipPath = wedge(edge, 360); }
+    else if (c < 1){ edge = 360 * c; w.el.style.clipPath = wedge(0, edge); }
+    else { edge = 0; w.el.style.clipPath = "none"; }
+    var sweeping = (c < 1) || (o > 0);
+    w.hand.style.opacity = sweeping ? 1 : 0;
+    w.hand.style.transform = "rotate(" + edge.toFixed(2) + "deg)";
+    w.copy.style.opacity = (clamp((c - .7) / .3, 0, 1) * (1 - clamp(o / .35, 0, 1))).toFixed(3);
+  }
   var ch2 = Scrub({
     count:641, IW:1440, IH:810,
     src:function(i){ return "frames2/f" + String(i + 1).padStart(4, "0") + ".webp"; },
@@ -237,26 +265,10 @@
       ];
     },
     onPaint:function(S, pos){
-      // Doors: two halves close from the sides, copy sits on the seam, then they part again
-      var di = S.seg("doorsIn"), dO = S.seg("doorsOut");
-      var d = ramp(pos, di.start + 4, di.end - 10) * (1 - ramp(pos, dO.start + 10, dO.end - 4));
-      if (d !== cover.d){
-        cover.d = d;
-        doors[0].style.transform = "translate3d(" + (-(1 - d) * 101).toFixed(2) + "%,0,0)";
-        doors[1].style.transform = "translate3d(" + ((1 - d) * 101).toFixed(2) + "%,0,0)";
-        doorCopy.style.opacity = clamp((d - .6) / .4, 0, 1).toFixed(3);
-        s2el.querySelector(".doors").style.visibility = d > 0 ? "visible" : "hidden";
-      }
-      // Curtain: a panel rises from below, holds with copy, then lifts away upward
-      var ci = S.seg("curtainIn"), cO = S.seg("curtainOut");
-      var up = ramp(pos, ci.start + 4, ci.end - 10), off = ramp(pos, cO.start + 10, cO.end - 4);
-      var c = up * 10 + off;                       // encodes both phases for the change check
-      if (c !== cover.c){
-        cover.c = c;
-        curtain.style.transform = "translate3d(0," + ((1 - up) * 101 - off * 101).toFixed(2) + "%,0)";
-        curtainIn.style.opacity = clamp((up - .5) / .5, 0, 1) * (1 - clamp(off / .5, 0, 1));
-        curtain.style.visibility = (up > 0 && off < 1) ? "visible" : "hidden";
-      }
+      // Seam covers: a coloured field sweeps clockwise from twelve like a seconds hand, holds
+      // one line of copy while the frame index jumps underneath, then sweeps on round and off.
+      paintSweep(sweeps[0], pos, S.seg("doorsIn"), S.seg("doorsOut"));
+      paintSweep(sweeps[1], pos, S.seg("curtainIn"), S.seg("curtainOut"));
     }
   });
   window.__batto = { hero:hero, ch2:ch2 };
@@ -290,6 +302,7 @@
     var dt = lastT ? Math.min(100, now - lastT) : 16.667; lastT = now;
     if (started) introK = reduce ? 1 : clamp((now - introStart) / 1400, 0, 1);
     scrubs.forEach(function(s){ s.tick(dt, introK); });
+    extras.forEach(function(f){ f(dt, now); });
     requestAnimationFrame(tick);
   }
   addEventListener("scroll", function(){
@@ -301,88 +314,183 @@
   setTimeout(start, 15000);
   requestAnimationFrame(tick);
 
-  /* ======================= LOWER SECTIONS (one-shot reveals) ======================= */
-  var io = "IntersectionObserver" in window ? new IntersectionObserver(function(list){
-    list.forEach(function(en){ if (en.isIntersecting){ io.unobserve(en.target); en.target._fire(en.target); } });
-  }, { rootMargin: "0px 0px -18% 0px" }) : null;
-  function watch(el, fn){ el._fire = fn; if (io && !reduce) io.observe(el); else fn(el); }
 
-  [].forEach.call(document.querySelectorAll(".sheet h2"), function(h){
-    h.classList.add("rv"); watch(h, function(el){ el.classList.add("in"); });
-  });
-  [].forEach.call(document.querySelectorAll(".sheet h2 ~ p, .cert-copy p"), function(p){
+  /* ======================= LOWER SECTIONS ======================= */
+  function pad(n){ return (n < 10 ? "0" : "") + n; }
+  var io = "IntersectionObserver" in window ? function(el, fn, margin){
+    var o = new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting){ o.unobserve(e.target); fn(e.target); } }); }, { rootMargin: margin || "0px 0px -15% 0px" });
+    o.observe(el);
+  } : function(el, fn){ fn(el); };
+
+  // Headings with the width axis: they settle from wide to set width once, on arrival
+  [].forEach.call(document.querySelectorAll(".wdth-in"), function(h){
     if (reduce) return;
-    p.style.opacity = 0;
-    watch(p, function(el){ el.animate([{ opacity:0 }, { opacity:1 }], { duration:900, delay:160, easing:"cubic-bezier(0.23,1,0.32,1)", fill:"forwards" }); });
+    h.classList.add("wide");
+    io(h, function(el){ requestAnimationFrame(function(){ el.classList.remove("wide"); }); });
   });
 
-  // Timing trace: a pen rides the tip of the line as it draws, then the readings count up
-  var path = document.getElementById("tracePath"), pen = document.getElementById("tracePen");
-  if (path){
-    var L = path.getTotalLength(), dds = [].slice.call(document.querySelectorAll(".read dd"));
-    if (!reduce){ path.style.strokeDasharray = L; path.style.strokeDashoffset = L; pen.style.opacity = 0; }
-    watch(document.querySelector(".sheet-card"), function(){
-      if (reduce) return;
-      var t0 = performance.now();
-      pen.style.opacity = 1;
-      (function step(now){
-        var t = clamp((now - t0) / 2400, 0, 1), d = L * t, pt = path.getPointAtLength(d);
-        path.style.strokeDashoffset = L - d;
-        pen.setAttribute("cx", pt.x); pen.setAttribute("cy", pt.y);
-        if (t < 1) requestAnimationFrame(step);
-      })(t0);
-      dds.forEach(function(dd, k){
-        var m = dd.textContent.match(/^([+]?)([\d.]+)(.*)$/); if (!m) return;
-        var end = parseFloat(m[2]), dec = (m[2].split(".")[1] || "").length, c0 = performance.now() + 300 + k * 120;
-        (function count(now){
-          var t = clamp((now - c0) / 1100, 0, 1);
-          dd.textContent = m[1] + (end * ease(t, "out")).toFixed(dec) + m[3];
-          if (t < 1) requestAnimationFrame(count);
-        })(c0);
-      });
+  // Odometer: each digit is a 0-9 column moved by translateY; higher columns carry later
+  function Odo(el){
+    var cols = [];
+    function ensure(n){
+      while (cols.length < n){
+        var c = document.createElement("span"); c.className = "odo-col";
+        var s = document.createElement("span"); s.className = "odo-strip"; s.textContent = "0123456789";
+        c.appendChild(s); el.insertBefore(c, el.firstChild); cols.unshift(s);
+      }
+    }
+    return function(v){
+      var str = String(Math.max(0, Math.floor(v))); ensure(str.length);
+      var off = cols.length - str.length;
+      for (var i = 0; i < cols.length; i++){
+        var d = i < off ? 0 : +str[i - off];
+        cols[i].style.transform = "translate3d(0," + (-d * 10) + "%,0)";
+        cols[i].parentNode.style.display = (i < off) ? "none" : "";
+        cols[i].style.transitionDelay = ((cols.length - 1 - i) * 40) + "ms";
+      }
+      el.setAttribute("aria-label", str);
+    };
+  }
+  // Live beats since arrival: 8 per second, like the 28,800 vph balance
+  var t0 = performance.now(), beatSet = Odo(document.getElementById("beatOdo")), lastBeat = -1;
+  extras.push(function(dt, now){
+    var b = Math.floor((now - t0) / 125);
+    if (b !== lastBeat){ lastBeat = b; beatSet(b); }
+  });
+  // Fixed figures roll up to their value once, on arrival
+  [].forEach.call(document.querySelectorAll(".figs .odo"), function(el){
+    var set = Odo(el), to = +el.getAttribute("data-to");
+    set(reduce ? to : 0);
+    io(el, function(){ setTimeout(function(){ set(to); }, 120); });
+  });
+
+  // Clocks: the visitor's time and the boutique's, written only when the second changes
+  var lt = document.getElementById("localTime"), cl = document.getElementById("clkLocal"), cj = document.getElementById("clkJhb"), lastSec = -1;
+  var jhb = window.Intl ? new Intl.DateTimeFormat("en-GB", { timeZone:"Africa/Johannesburg", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false }) : null;
+  function clocks(){
+    var d = new Date(), s = d.getSeconds(); if (s === lastSec) return; lastSec = s;
+    lt.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    lt.setAttribute("datetime", d.toISOString());
+    cl.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(s);
+    cj.textContent = jhb ? jhb.format(d) : cl.textContent;
+  }
+  clocks(); setInterval(clocks, 250);
+
+  // The line: four dials on a ring. Scroll turns the ring so the active dial sits at twelve,
+  // dials counter-rotate to stay upright, and the ground cross-fades to that dial's colour.
+  var line = document.getElementById("line"), ring = document.getElementById("ring");
+  var dialEls = [].slice.call(ring.querySelectorAll(".dialw")), picks = [].slice.call(line.querySelectorAll(".pick"));
+  var arc = ring.querySelector(".ring-arc"), ringTrack = ring.querySelector(".ring-track");
+  var MODELS = [
+    { ref:"BT-01", name:"Midnight on gold",       spec:"Yellow gold · midnight blue",        bg:[15, 30, 61],    light:false },
+    { ref:"BT-02", name:"Midnight on steel",      spec:"Steel · midnight blue",              bg:[27, 41, 66],    light:false },
+    { ref:"BT-03", name:"Racing green on steel",  spec:"Steel · racing green",               bg:[14, 58, 44],    light:false },
+    { ref:"BT-04", name:"White with red counters",spec:"Steel · white, red counters",        bg:[242, 240, 235], light:true }
+  ];
+  var hubRef = document.getElementById("hubRef"), hubName = document.getElementById("hubName"), hubSpec = document.getElementById("hubSpec");
+  var ringShown = 0, ringActive = -1, ringKey = "";
+  function ringTarget(){
+    var r = line.getBoundingClientRect(), span = Math.max(1, r.height - innerHeight);
+    var t = clamp(-r.top / span, 0, 1) * 3, i = Math.min(2, Math.floor(t)), f = t - i;
+    return i + smooth(clamp((f - 0.22) / 0.56, 0, 1));            // detents: hold, turn, hold
+  }
+  extras.push(function(dt){
+    var r = line.getBoundingClientRect();
+    if (r.bottom < -ch || r.top > ch * 2) return;
+    var tgt = ringTarget();
+    ringShown = reduce ? tgt : ringShown + (tgt - ringShown) * (1 - Math.pow(1 - .115, dt / 16.667));
+    var key = ringShown.toFixed(4) + "|" + cw; if (key === ringKey) return; ringKey = key;
+    var R = Math.min(cw * (cw < 700 ? 0.3 : 0.22), ch * 0.22);
+    ringTrack.style.width = arc.style.width = (2 * R).toFixed(0) + "px";
+    dialEls.forEach(function(el, k){
+      var ang = (k - ringShown) * 90, near = Math.max(0, 1 - Math.abs(k - ringShown));
+      el.style.transform = "rotate(" + ang + "deg) translate3d(0," + (-R).toFixed(1) + "px,0) rotate(" + (-ang) + "deg) scale(" + (0.6 + 0.4 * near).toFixed(3) + ")";
+      el.style.opacity = (0.45 + 0.55 * near).toFixed(3);
+      el.style.zIndex = near > .5 ? 2 : 1;
+    });
+    arc.style.transform = "rotate(" + (-ringShown * 90) + "deg)";   // the ticked bezel turns with the ring
+    var lo = Math.floor(ringShown), hi = Math.min(3, lo + 1), f = ringShown - lo, A = MODELS[lo].bg, B = MODELS[hi].bg;
+    line.style.backgroundColor = "rgb(" + [0, 1, 2].map(function(j){ return Math.round(A[j] + (B[j] - A[j]) * f); }).join(",") + ")";
+    var act = Math.round(ringShown);
+    if (act !== ringActive){
+      ringActive = act; var M = MODELS[act];
+      hubRef.textContent = M.ref; hubName.textContent = M.name; hubSpec.textContent = M.spec;
+      line.classList.toggle("on-light", M.light);
+      picks.forEach(function(b, k){ b.setAttribute("aria-pressed", k === act); });
+    }
+  });
+  picks.forEach(function(b){                 // jump the scroll to that dial's detent
+    b.addEventListener("click", function(){
+      var k = +b.getAttribute("data-i"), r = line.getBoundingClientRect(), span = r.height - innerHeight;
+      scrollTo({ top: pageYOffset + r.top + span * (k / 3), behavior: "auto" });   // the page lerp already eases the jump
+    });
+  });
+
+  // Header reads on whatever chapter sits under it: ink on paper, paper on everything else
+  var topBar = document.querySelector(".top"), lights = [document.getElementById("numbers"), line], topLight = null;
+  extras.push(function(){
+    var y = 34, on = false;
+    for (var i = 0; i < lights.length; i++){
+      var r = lights[i].getBoundingClientRect();
+      if (r.top <= y && r.bottom >= y && (lights[i] !== line || line.classList.contains("on-light"))) on = true;
+    }
+    if (on !== topLight){ topLight = on; topBar.classList.toggle("on-light", on); }
+  });
+
+  // Fitting: day chips plus a tick rail that magnifies toward the pointer like a dock
+  var dayRow = document.getElementById("dayRow"), rail = document.getElementById("rail"), slotRead = document.getElementById("slotRead");
+  var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var pickDay = null, pickTime = null, d0 = new Date();
+  for (var k = 1, made = 0; made < 5; k++){
+    var d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + k);
+    if (d.getDay() === 0) continue;             // boutique closed on Sunday
+    var b = document.createElement("button"); b.type = "button"; b.className = "day";
+    b.innerHTML = "<span>" + DAYS[d.getDay()] + "</span><b>" + d.getDate() + "</b>";
+    b.setAttribute("aria-pressed", made === 0); b._label = DAYS[d.getDay()] + " " + d.getDate() + " " + MON[d.getMonth()];
+    if (made === 0) pickDay = b._label;
+    b.addEventListener("click", function(){ [].forEach.call(dayRow.children, function(x){ x.setAttribute("aria-pressed", x === this); }, this); pickDay = this._label; readSlot(); });
+    dayRow.appendChild(b); made++;
+  }
+  var ticks = [];
+  for (var m = 10 * 60; m <= 18 * 60; m += 30){
+    var tk = document.createElement("button"); tk.type = "button"; tk.className = "tick" + (m % 60 ? "" : " hour");
+    tk.setAttribute("role", "radio"); tk.setAttribute("aria-checked", "false");
+    tk._label = pad(Math.floor(m / 60)) + ":" + pad(m % 60); tk.setAttribute("aria-label", tk._label);
+    tk.innerHTML = "<i></i>" + (m % 60 ? "" : "<span>" + Math.floor(m / 60) + "</span>");
+    rail.appendChild(tk); ticks.push(tk);
+  }
+  function choose(tk){
+    ticks.forEach(function(x){ var on = x === tk; x.setAttribute("aria-checked", on); x.tabIndex = on ? 0 : -1; x.classList.toggle("on", on); });
+    pickTime = tk._label; readSlot();
+  }
+  ticks.forEach(function(tk, i){
+    tk.tabIndex = i === 0 ? 0 : -1;
+    tk.addEventListener("click", function(){ choose(tk); });
+    tk.addEventListener("keydown", function(e){
+      var j = e.key === "ArrowRight" || e.key === "ArrowDown" ? i + 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? i - 1 : -1;
+      if (j < 0 || j >= ticks.length) return; e.preventDefault(); ticks[j].focus(); choose(ticks[j]);
+    });
+  });
+  function readSlot(){ slotRead.textContent = pickTime ? pickDay + " · " + pickTime : "Choose a time"; }
+  // Dock magnification: gaussian falloff around the pointer, each tick eased toward its target
+  var mag = ticks.map(function(){ return 1; }), magT = ticks.map(function(){ return 1; }), magKey = "";
+  if (!reduce && matchMedia("(hover: hover) and (pointer: fine)").matches){
+    rail.addEventListener("pointermove", function(e){
+      ticks.forEach(function(tk, i){ var r = tk.getBoundingClientRect(), dx = (e.clientX - (r.left + r.width / 2)) / (r.width * 2.2); magT[i] = 1 + 1.4 * Math.exp(-dx * dx); });
+    });
+    rail.addEventListener("pointerleave", function(){ magT = magT.map(function(){ return 1; }); });
+    extras.push(function(dt){
+      var k = 1 - Math.pow(1 - .2, dt / 16.667), s = "";
+      for (var i = 0; i < ticks.length; i++){ mag[i] += (magT[i] - mag[i]) * k; s += mag[i].toFixed(3); }
+      if (s === magKey) return; magKey = s;
+      ticks.forEach(function(tk, i){ tk.firstChild.style.transform = "scaleY(" + mag[i].toFixed(3) + ")"; });
     });
   }
 
-  // Catalogue: viewfinder marks close in on the featured dial, then the watch snaps into the frame.
-  // Picking a reference swaps the featured watch; the marks re-close on the new one.
-  var main = document.querySelector(".slot.main");
-  if (main){
-    var marks = [].slice.call(main.querySelectorAll(".crop i")), img = main.querySelector(".shot img");
-    var cap = main.querySelector("figcaption"), rows = [].slice.call(document.querySelectorAll(".refs tbody tr"));
-    function frameIn(){
-      if (reduce) return;
-      var off = [[-60,-60],[60,-60],[-60,60],[60,60]];
-      marks.forEach(function(m, k){
-        m.animate([{ transform:"translate(" + off[k][0] + "px," + off[k][1] + "px)", opacity:0 },
-                   { transform:"translate(0,0)", opacity:1 }], { duration:700, easing:"cubic-bezier(0.32,0.72,0,1)", fill:"both" });
-      });
-      img.animate([{ opacity:0, transform:"scale(1.08)" }, { opacity:1, transform:"scale(1.01)", offset:.9 }, { opacity:1, transform:"scale(1)" }],
-        { duration:900, delay:300, easing:"cubic-bezier(0.23,1,0.32,1)", fill:"both" });
-    }
-    if (!reduce) img.style.opacity = 0;
-    watch(main, frameIn);
-    function pick(ref){
-      var row = rows.filter(function(r){ return r.getAttribute("data-ref") === ref; })[0]; if (!row) return;
-      rows.forEach(function(r){ var on = r === row; r.classList.toggle("on", on); r.querySelector("button").setAttribute("aria-pressed", on); });
-      img.src = row.getAttribute("data-img"); img.alt = row.getAttribute("data-alt");
-      cap.innerHTML = "<b>" + row.getAttribute("data-name") + "</b><span>" + ref + "</span>";
-      frameIn();
-    }
-    rows.forEach(function(r){ r.querySelector("button").addEventListener("click", function(){ pick(r.getAttribute("data-ref")); }); });
-    [].forEach.call(document.querySelectorAll(".slot.side"), function(s){
-      s.addEventListener("click", function(){ pick(s.getAttribute("data-ref")); });
-    });
-    rows.forEach(function(tr, k){
-      if (reduce) return;
-      tr.style.opacity = 0;
-      watch(tr, function(el){ el.animate([{ opacity:0 }, { opacity:1 }], { duration:500, delay:k * 60, easing:"ease-out", fill:"forwards" }); });
-    });
-  }
-
-  // Fitting form: honest about the demo, errors next to the field
   var form = document.getElementById("fitForm"), note = document.getElementById("formNote");
-  if (form) form.addEventListener("submit", function(ev){
+  form.addEventListener("submit", function(ev){
     ev.preventDefault();
+    if (!pickTime){ note.textContent = "Pick a time on the rail first."; ticks[0].focus(); return; }
     var bad = null;
     [].forEach.call(form.querySelectorAll("[required]"), function(f){
       var ok = f.value.trim() && (f.type !== "email" || /.+@.+\..+/.test(f.value));
@@ -390,6 +498,6 @@
       if (!ok && !bad) bad = f;
     });
     if (bad){ note.textContent = "Please add your " + bad.name + "."; bad.focus(); return; }
-    note.textContent = "Thank you, " + form.elements.name.value.trim().split(" ")[0] + ". This demo build doesn't send requests yet.";
+    note.textContent = "Held for you: " + pickDay + " at " + pickTime + ". This demo build doesn't send requests yet.";
   });
 })();
