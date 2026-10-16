@@ -400,7 +400,7 @@
     var tgt = ringTarget();
     ringShown = reduce ? tgt : ringShown + (tgt - ringShown) * (1 - Math.pow(1 - .115, dt / 16.667));
     var key = ringShown.toFixed(4) + "|" + cw; if (key === ringKey) return; ringKey = key;
-    var R = Math.min(cw * (cw < 700 ? 0.3 : 0.22), ch * 0.22);
+    var R = Math.min(cw * (cw < 700 ? 0.35 : 0.22), ch * (cw < 700 ? 0.25 : 0.23));
     ringTrack.style.width = arc.style.width = (2 * R).toFixed(0) + "px";
     dialEls.forEach(function(el, k){
       var ang = (k - ringShown) * 90, near = Math.max(0, 1 - Math.abs(k - ringShown));

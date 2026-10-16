@@ -269,3 +269,12 @@ p { margin: 0; }
 .top.on-light .btn-ghost { color: var(--paper-ink); border-color: rgb(18 20 24 / .3); }
 .ring-track, .ring-arc { width: 44vh; }
 .dialw { --d: clamp(110px, 14vw, 200px); width: var(--d); margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2); }
+
+/* Dial ring uses background-removed cutouts: the watches stand on the chapter colour, no frames */
+.dialw { --d: clamp(118px, 14vw, 210px); width: var(--d); height: calc(var(--d) * 1.25); aspect-ratio: auto;
+  margin: calc(var(--d) * -0.625) 0 0 calc(var(--d) / -2); border-radius: 0; overflow: visible; box-shadow: none; }
+.dialw img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 50%; transform: none;
+  filter: drop-shadow(0 22px 26px rgb(0 0 0 / .38)); }
+.line.on-light .dialw img { filter: drop-shadow(0 18px 22px rgb(18 20 24 / .22)); }
+
+@media (max-width: 700px) { .dialw { --d: 96px; } }
